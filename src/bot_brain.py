@@ -11,6 +11,7 @@ import numpy as np
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted
 
 from src.config import CHAT_PAIRS_FILE, VECTOR_INDEX_FILE, GOOGLE_API_KEY
 
@@ -152,6 +153,9 @@ class BotBrain:
         try:
             response = self._model.generate_content(prompt)
             return response.text.strip()
+        except ResourceExhausted:
+            logger.warning("[Error] Gemini quota exceeded.")
+            return "利用上限になっちゃった、、、また利用できるまで少し待っててね💦"
         except Exception as e:
             logger.error(f"[Error] Gemini generation failed: {e}", exc_info=True)
             return "ごめん、ちょっと調子悪いかも..."

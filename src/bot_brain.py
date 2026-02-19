@@ -7,6 +7,7 @@ BotBrain: RAG ベースの返信生成モジュール (NumPy + SentenceTransform
 
 import json
 import time
+import random  # Added for emoji injection
 import numpy as np
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
@@ -153,7 +154,12 @@ class BotBrain:
         # 3. 生成
         try:
             response = self._model.generate_content(prompt)
-            return response.text.strip()
+            reply_text = response.text.strip()
+            
+            # 50% の確率で絵文字を付与
+            reply_text = self._inject_emoji(reply_text)
+            
+            return reply_text
         except ResourceExhausted:
             logger.warning("[Error] Gemini quota exceeded.")
             return "利用上限になっちゃった、、、また利用できるまで少し待っててね💦"
@@ -196,6 +202,19 @@ class BotBrain:
             })
             
         return results
+
+    def _inject_emoji(self, text: str) -> str:
+        """
+        50% の確率で、指定された絵文字リストからランダムに1つ選んで文末に付与する。
+        """
+        if random.random() < 0.5:
+            # ユーザー指定の絵文字リスト
+            emoji_list = ["🥹", "💖", "🥰", "😌", "☺️", "💝"]
+            emoji = random.choice(emoji_list)
+            # 文末にスペースを空けて付与するかは好みだが、今回は自然に繋げるためスペースなし or ありを検討
+            # ここではスペースありで付与
+            return text + " " + emoji
+        return text
 
     def _build_prompt(self, user_message: str, similar_items: list[dict]) -> str:
         """プロンプト組み立て"""

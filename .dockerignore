@@ -1,0 +1,6 @@
+.git
+.env
+venv
+__pycache__
+data/chat_pairs.json
+data/chat_pairs_sampled.json

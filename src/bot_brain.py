@@ -15,7 +15,7 @@ import google.generativeai as genai
 from src.config import CHAT_PAIRS_FILE, VECTOR_INDEX_FILE, GOOGLE_API_KEY
 
 # ─── 定数 ───────────────────────────────────────────────
-GENERATION_MODEL = "gemini-2.0-flash"
+GENERATION_MODEL = "gemini-flash-latest"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 TOP_K = 10  # RAG で取得する類似会話の数
 

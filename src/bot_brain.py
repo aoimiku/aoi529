@@ -48,6 +48,8 @@ class BotBrain:
             # 今回は必須とする
             pass
         genai.configure(api_key=GOOGLE_API_KEY)
+        masked_key = GOOGLE_API_KEY[:4] + "..." + GOOGLE_API_KEY[-4:] if len(GOOGLE_API_KEY) > 8 else "INVALID"
+        print(f"[BotBrain] Configured with API Key: {masked_key}")
 
         # 埋め込みモデルの初期化
         print(f"[BotBrain] Loading embedding model: {EMBEDDING_MODEL} ...")

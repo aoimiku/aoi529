@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 8000
 
 # Start the application using Gunicorn
-CMD ["gunicorn", "src.server:app", "--bind", "0.0.0.0:8000", "-k", "uvicorn.workers.UvicornWorker"]
+CMD sh -c "gunicorn src.server:app --bind 0.0.0.0:${PORT:-8000} -k uvicorn.workers.UvicornWorker"

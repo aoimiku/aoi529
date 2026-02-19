@@ -8,9 +8,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install dependencies
+# Copy requirements and install dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Install CPU-only torch (remove torchvision to save space)
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
 RUN pip install --no-cache-dir -r requirements.txt
+
+# Pre-download the model to cache it in the image
+COPY download_model.py .
+RUN python download_model.py
 
 # Copy application code
 COPY . .
@@ -18,5 +24,5 @@ COPY . .
 # Expose the port
 EXPOSE 8000
 
-# Start the application using Gunicorn
-CMD sh -c "gunicorn src.server:app --bind 0.0.0.0:${PORT:-8000} -k uvicorn.workers.UvicornWorker"
+# Start the application using Gunicorn (timeout increased to 120s)
+CMD sh -c "gunicorn src.server:app --bind 0.0.0.0:${PORT:-8000} -k uvicorn.workers.UvicornWorker --timeout 120"

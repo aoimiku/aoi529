@@ -9,9 +9,16 @@ import io
 import sys
 import traceback
 
-# Windows コンソール対策
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+import logging
+
+# Logger setup
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("uvicorn")
+
+# Windows コンソール対策 (Windowsのみ適用)
+if sys.platform == "win32":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 from fastapi import FastAPI, Request, HTTPException
 from linebot.v3 import WebhookParser
@@ -34,6 +41,7 @@ app = FastAPI(title="Matsubara Aoi LINE Bot", version="1.0.0")
 
 # LINE SDK
 if not LINE_CHANNEL_SECRET or not LINE_CHANNEL_ACCESS_TOKEN:
+    logger.error("LINE_CHANNEL_SECRET / LINE_CHANNEL_ACCESS_TOKEN が未設定です。")
     raise ValueError(
         "LINE_CHANNEL_SECRET / LINE_CHANNEL_ACCESS_TOKEN が未設定です。"
         ".env ファイルを確認してください。"
@@ -43,9 +51,9 @@ parser = WebhookParser(LINE_CHANNEL_SECRET)
 line_config = Configuration(access_token=LINE_CHANNEL_ACCESS_TOKEN)
 
 # BotBrain (起動時に ChromaDB ロード)
-print("[Server] BotBrain initializing ...")
+logger.info("[Server] BotBrain initializing ...")
 brain = BotBrain()
-print("[Server] BotBrain ready!")
+logger.info("[Server] BotBrain ready!")
 
 
 # ─── エンドポイント ───────────────────────────────────────

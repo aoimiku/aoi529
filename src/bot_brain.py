@@ -38,6 +38,9 @@ SYSTEM_PROMPT = """\
 """
 
 
+import logging
+logger = logging.getLogger("uvicorn")
+
 class BotBrain:
     """RAG + Gemini (NumPy Vector Search) による松原碧チャットボット。"""
 
@@ -49,10 +52,10 @@ class BotBrain:
             pass
         genai.configure(api_key=GOOGLE_API_KEY)
         masked_key = GOOGLE_API_KEY[:4] + "..." + GOOGLE_API_KEY[-4:] if len(GOOGLE_API_KEY) > 8 else "INVALID"
-        print(f"[BotBrain] Configured with API Key: {masked_key}")
+        logger.info(f"[BotBrain] Configured with API Key: {masked_key}")
 
         # 埋め込みモデルの初期化
-        print(f"[BotBrain] Loading embedding model: {EMBEDDING_MODEL} ...")
+        logger.info(f"[BotBrain] Loading embedding model: {EMBEDDING_MODEL} ...")
         self._embed_model = SentenceTransformer(EMBEDDING_MODEL)
 
         # Gemini 生成モデル
@@ -71,19 +74,19 @@ class BotBrain:
     def _load_or_build_index(self):
         """インデックスをロード、無ければ作成する"""
         if VECTOR_INDEX_FILE.exists():
-            print(f"[BotBrain] Loading index from {VECTOR_INDEX_FILE} ...")
+            logger.info(f"[BotBrain] Loading index from {VECTOR_INDEX_FILE} ...")
             try:
                 data = np.load(VECTOR_INDEX_FILE, allow_pickle=True)
                 self.vectors = data["vectors"]
                 self.metadata = data["metadata"].tolist()
-                print(f"[BotBrain] Loaded {len(self.vectors)} vectors.")
+                logger.info(f"[BotBrain] Loaded {len(self.vectors)} vectors.")
             except Exception as e:
-                print(f"[BotBrain] Failed to load index: {e}")
+                logger.error(f"[BotBrain] Failed to load index: {e}")
                 # ロード失敗時は再生成へのフォールバックなどを検討
                 pass
 
         if self.vectors is None:
-            print("[BotBrain] No index found. Building index (sample subset)...")
+            logger.info("[BotBrain] No index found. Building index (sample subset)...")
             # サーバー起動時の自動生成は重いので、本来はここに入らないように運用する
             # フォールバックとして少なめの件数で作成
             self._build_index_sample(sample_size=1000)
@@ -99,7 +102,7 @@ class BotBrain:
         with open(CHAT_PAIRS_FILE, "r", encoding="utf-8") as f:
             pairs = json.load(f)
 
-        print(f"[BotBrain] Loading {len(pairs)} items...")
+        logger.info(f"[BotBrain] Loading {len(pairs)} items...")
 
         # 全件使用 (sample_size が指定されていなければ)
         if sample_size:
@@ -110,7 +113,7 @@ class BotBrain:
         else:
             target_pairs = pairs
 
-        print(f"[BotBrain] Embedding {len(target_pairs)} items locally (this may take a while)...")
+        logger.info(f"[BotBrain] Embedding {len(target_pairs)} items locally (this may take a while)...")
 
         inputs = [p["input"] for p in target_pairs]
 
@@ -126,7 +129,7 @@ class BotBrain:
             vectors=self.vectors,
             metadata=np.array(self.metadata)
         )
-        print(f"[BotBrain] Index saved to {VECTOR_INDEX_FILE}")
+        logger.info(f"[BotBrain] Index saved to {VECTOR_INDEX_FILE}")
 
     def generate_reply(self, message: str) -> str:
         """ユーザーメッセージに対して返信を生成する"""
@@ -137,10 +140,10 @@ class BotBrain:
         similar_items = self._search_similar(message, top_k=TOP_K)
         
         # ログ出力: 検索結果を確認
-        print(f"--- [RAG Context for: {message}] ---")
-        for i, item in enumerate(similar_items):
-             print(f"  Ref {i+1}: {item['input']} -> {item['reply']}")
-        print("-----------------------------------")
+        # logger.info(f"--- [RAG Context for: {message}] ---")
+        # for i, item in enumerate(similar_items):
+        #      logger.info(f"  Ref {i+1}: {item['input']} -> {item['reply']}")
+        # logger.info("-----------------------------------")
 
         # 2. プロンプト作成
         prompt = self._build_prompt(message, similar_items)
@@ -150,7 +153,7 @@ class BotBrain:
             response = self._model.generate_content(prompt)
             return response.text.strip()
         except Exception as e:
-            print(f"[Error] Gemini generation failed: {e}")
+            logger.error(f"[Error] Gemini generation failed: {e}", exc_info=True)
             return "ごめん、ちょっと調子悪いかも..."
 
     def _search_similar(self, query: str, top_k: int = 10) -> list[dict]:
